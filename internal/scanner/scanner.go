@@ -3,6 +3,7 @@ package scanner
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -11,7 +12,7 @@ import (
 )
 
 var AudioExts = map[string]bool{
-	".mp3": true, 
+	".mp3": true,
 	".flac": true,
 	".ogg": true,
 	".m4a": true,
@@ -26,13 +27,12 @@ var AudioExts = map[string]bool{
 	".wv": true,
 }
 
-// ffprobe format JSON structure (partial)
 type ffprobeFormat struct {
-	Tags map[string]string `json:"tags"`
-	Duration string `json:"duration"`
+	Tags     map[string]string `json:"tags"`
+	Duration string            `json:"duration"`
 }
 
-type ffprobeOut struct{
+type ffprobeOut struct {
 	Format ffprobeFormat `json:"format"`
 }
 
@@ -43,37 +43,50 @@ func ffprobeTags(path string) (map[string]string, error) {
 		return nil, err
 	}
 	var f ffprobeOut
-	if err := json.Unmarshal(out, &f); err != nil { return nil, err }
+	if err := json.Unmarshal(out, &f); err != nil {
+		return nil, err
+	}
 	m := make(map[string]string)
-	for k,v := range f.Format.Tags { m[strings.ToLower(k)] = v }
+	for k, v := range f.Format.Tags {
+		m[strings.ToLower(k)] = v
+	}
 	return m, nil
 }
 
 func ffprobeDuration(path string) (float64, error) {
 	cmd := exec.Command("ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "default=noprint_wrappers=1:nokey=1", path)
 	out, err := cmd.Output()
-	if err != nil { return 0, err }
+	if err != nil {
+		return 0, err
+	}
 	s := strings.TrimSpace(string(out))
-	if s == "" { return 0, nil }
+	if s == "" {
+		return 0, nil
+	}
 	var v float64
 	fmt.Sscanf(s, "%f", &v)
 	return v, nil
 }
 
 func ScanAndStore(d *db.DB, root string) error {
-	return filepath.Walk(root, func(p string, info filepath.FileInfo, err error) error {
-		if err != nil { return nil }
-		if info.IsDir() { return nil }
+	return filepath.Walk(root, func(p string, info os.FileInfo, err error) error {
+		if err != nil {
+			return nil
+		}
+		if info.IsDir() {
+			return nil
+		}
 		ext := strings.ToLower(filepath.Ext(p))
-		if !AudioExts[ext] { return nil }
-		// try get tags/duration
+		if !AudioExts[ext] {
+			return nil
+		}
 		tags, _ := ffprobeTags(p)
 		dur, _ := ffprobeDuration(p)
 		t := db.Track{
-			Path: p,
-			Title: firstNonEmpty(tags["title"], filepath.Base(strings.TrimSuffix(p, ext))),
-			Artist: tags["artist"],
-			Album: tags["album"],
+			Path:     p,
+			Title:    firstNonEmpty(tags["title"], filepath.Base(strings.TrimSuffix(p, ext))),
+			Artist:   tags["artist"],
+			Album:    tags["album"],
 			Duration: dur,
 		}
 		if err := d.UpsertTrack(t); err != nil {
@@ -83,4 +96,9 @@ func ScanAndStore(d *db.DB, root string) error {
 	})
 }
 
-func firstNonEmpty(a, b string) string { if strings.TrimSpace(a) != "" { return a }; return b }
+func firstNonEmpty(a, b string) string {
+	if strings.TrimSpace(a) != "" {
+		return a
+	}
+	return b
+}

@@ -45,8 +45,10 @@ func main() {
 		log.Fatalf("tui init: %v", err)
 	}
 
-	if err := p.Start(); err != nil {
+	// Change p.Start() to p.Run() because *tea.Program has a native Run() method
+		if _, err := p.Run(); err != nil {
 		log.Printf("tui error: %v", err)
 		os.Exit(1)
 	}
+
 }
