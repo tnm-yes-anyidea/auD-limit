@@ -1,0 +1,21 @@
+# Binaries and build artifacts
+dist/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Go build
+*.test
+*.out
+
+# SQLite DB
+.audlimiter.db
+
+# VS Code
+.vscode/
+
+# Python leftovers
+venv/
+__pycache__/
