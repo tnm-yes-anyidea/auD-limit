@@ -53,8 +53,7 @@ func (p *MPV) send(cmd interface{}) error {
 	if p.conn == nil { return fmt.Errorf("no mpv socket") }
 	b, err := json.Marshal(cmd)
 	if err != nil { return err }
-	b = append(b, '
-')
+	b = append(b, '\n')
 	_, err = p.conn.Write(b)
 	return err
 }
